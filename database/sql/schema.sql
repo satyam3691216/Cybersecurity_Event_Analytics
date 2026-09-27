@@ -20,3 +20,13 @@ CREATE TABLE devices (
         FOREIGN KEY (user_id)
         REFERENCES users(user_id)
 );
+CREATE TABLE ip_addresses (
+    ip_address VARCHAR(45) PRIMARY KEY,
+    country VARCHAR(100),
+    city VARCHAR(100),
+    region VARCHAR(100),
+    isp VARCHAR(150),
+    ip_type VARCHAR(30),
+    first_seen TIMESTAMP NOT NULL,
+    last_seen TIMESTAMP
+);
