@@ -56,3 +56,29 @@ CREATE TABLE security_events (
         FOREIGN KEY (ip_address)
         REFERENCES ip_addresses(ip_address)
 );
+CREATE TABLE login_history (
+    login_id BIGSERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    event_id BIGINT,
+    login_timestamp TIMESTAMP NOT NULL,
+    ip_address VARCHAR(45),
+    device_id INTEGER,
+    login_status VARCHAR(20) NOT NULL,
+    failure_reason VARCHAR(100),
+
+    CONSTRAINT fk_login_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id),
+
+    CONSTRAINT fk_login_event
+        FOREIGN KEY (event_id)
+        REFERENCES security_events(event_id),
+
+    CONSTRAINT fk_login_ip
+        FOREIGN KEY (ip_address)
+        REFERENCES ip_addresses(ip_address),
+
+    CONSTRAINT fk_login_device
+        FOREIGN KEY (device_id)
+        REFERENCES devices(device_id)
+);
