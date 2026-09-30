@@ -95,3 +95,22 @@ CREATE TABLE risk_events (
         FOREIGN KEY (event_id)
         REFERENCES security_events(event_id)
 );
+CREATE TABLE alerts (
+    alert_id BIGSERIAL PRIMARY KEY,
+    event_id BIGINT NOT NULL,
+    risk_id BIGINT,
+    alert_type VARCHAR(100) NOT NULL,
+    alert_message TEXT,
+    severity VARCHAR(20),
+    alert_status VARCHAR(20) DEFAULT 'Open',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP,
+
+    CONSTRAINT fk_alert_event
+        FOREIGN KEY (event_id)
+        REFERENCES security_events(event_id),
+
+    CONSTRAINT fk_alert_risk
+        FOREIGN KEY (risk_id)
+        REFERENCES risk_events(risk_id)
+);
