@@ -30,3 +30,29 @@ CREATE TABLE ip_addresses (
     first_seen TIMESTAMP NOT NULL,
     last_seen TIMESTAMP
 );
+CREATE TABLE security_events (
+    event_id BIGINT PRIMARY KEY,
+    event_timestamp TIMESTAMP NOT NULL,
+    event_type VARCHAR(50) NOT NULL,
+    user_id INTEGER,
+    device_id INTEGER,
+    ip_address VARCHAR(45),
+    location VARCHAR(100),
+    device_type VARCHAR(50),
+    operating_system VARCHAR(50),
+    auth_status VARCHAR(20),
+    user_agent TEXT,
+    session_id VARCHAR(100),
+
+    CONSTRAINT fk_event_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id),
+
+    CONSTRAINT fk_event_device
+        FOREIGN KEY (device_id)
+        REFERENCES devices(device_id),
+
+    CONSTRAINT fk_event_ip
+        FOREIGN KEY (ip_address)
+        REFERENCES ip_addresses(ip_address)
+);
