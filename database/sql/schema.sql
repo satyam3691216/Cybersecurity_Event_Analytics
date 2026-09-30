@@ -114,3 +114,26 @@ CREATE TABLE alerts (
         FOREIGN KEY (risk_id)
         REFERENCES risk_events(risk_id)
 );
+CREATE INDEX idx_security_events_user
+ON security_events(user_id);
+
+CREATE INDEX idx_security_events_timestamp
+ON security_events(event_timestamp);
+
+CREATE INDEX idx_security_events_ip
+ON security_events(ip_address);
+
+CREATE INDEX idx_login_history_user
+ON login_history(user_id);
+
+CREATE INDEX idx_login_history_timestamp
+ON login_history(login_timestamp);
+
+CREATE INDEX idx_risk_events_level
+ON risk_events(risk_level);
+
+CREATE INDEX idx_alerts_severity
+ON alerts(severity);
+
+CREATE INDEX idx_alerts_status
+ON alerts(alert_status);
