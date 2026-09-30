@@ -82,3 +82,16 @@ CREATE TABLE login_history (
         FOREIGN KEY (device_id)
         REFERENCES devices(device_id)
 );
+CREATE TABLE risk_events (
+    risk_id BIGSERIAL PRIMARY KEY,
+    event_id BIGINT NOT NULL,
+    rule_score INTEGER DEFAULT 0,
+    anomaly_score DECIMAL(10,4),
+    hybrid_score DECIMAL(10,4),
+    risk_level VARCHAR(20),
+    generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_risk_event
+        FOREIGN KEY (event_id)
+        REFERENCES security_events(event_id)
+);
