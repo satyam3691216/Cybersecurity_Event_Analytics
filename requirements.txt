@@ -8,3 +8,4 @@ sqlalchemy
 psycopg2-binary
 jupyter
 openpyxl
+python-dotenv
