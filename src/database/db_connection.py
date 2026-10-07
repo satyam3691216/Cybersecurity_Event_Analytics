@@ -20,10 +20,22 @@ engine = create_engine(DATABASE_URL)
 
 try:
     with engine.connect() as connection:
-        result = connection.execute(text("SELECT 1"))
+        result = connection.execute(
+            text("""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                ORDER BY table_name
+            """)
+        )
+
+        tables = [row[0] for row in result]
 
         print("PostgreSQL connection successful.")
-        print("Test result:", result.scalar())
+        print("Tables found:")
+
+        for table in tables:
+            print("-", table)
 
 except Exception as e:
     print("PostgreSQL connection failed.")
