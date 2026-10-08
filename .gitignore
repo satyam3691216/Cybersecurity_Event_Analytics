@@ -2,3 +2,4 @@ venv/
 data/raw/*.csv
 data/processed/*.csv
 .env
+__pycache__/
