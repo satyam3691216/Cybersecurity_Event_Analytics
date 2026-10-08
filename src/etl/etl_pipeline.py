@@ -46,6 +46,9 @@ def transform_data(df):
     for column in text_columns:
         df[column] = df[column].astype(str).str.strip()
 
+    # Remove fields that are not part of the security_events database table
+    df = df.drop(columns=["risk_indicator"], errors="ignore")
+
     print(f"Records after transformation: {len(df)}")
 
     return df
