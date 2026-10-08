@@ -48,6 +48,24 @@ def transform_data(df):
 
     # Remove fields that are not part of the security_events database table
     df = df.drop(columns=["risk_indicator"], errors="ignore")
+    
+    # Keep only columns required by the security_events table
+    required_columns = [
+        "event_id",
+        "event_timestamp",
+        "event_type",
+        "user_id",
+        "device_id",
+        "ip_address",
+        "location",
+        "device_type",
+        "os",
+        "auth_status",
+        "user_agent",
+        "session_id"
+    ]
+
+    df = df[required_columns]
 
     print(f"Records after transformation: {len(df)}")
 
