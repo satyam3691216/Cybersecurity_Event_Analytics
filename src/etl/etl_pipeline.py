@@ -50,6 +50,22 @@ def transform_data(df):
 
     return df
 
+def load_data(df, table_name="security_events"):
+    """
+    Load transformed cybersecurity events into PostgreSQL.
+    """
+    print("Loading data into PostgreSQL...")
+
+    from src.database.db_connection import engine
+
+    df.to_sql(
+        table_name,
+        engine,
+        if_exists="append",
+        index=False
+    )
+
+    print(f"Loaded {len(df)} records into {table_name}.")
 
 if __name__ == "__main__":
     file_path = "data/raw/security_events_raw.csv"
@@ -58,5 +74,4 @@ if __name__ == "__main__":
 
     df = transform_data(df)
 
-    print("\nTransformed data:")
-    print(df.head())
+    load_data(df)
