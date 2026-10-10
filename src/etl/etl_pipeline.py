@@ -1,10 +1,11 @@
 import pandas as pd
-from sqlalchemy import text
+
+from src.database.db_connection import engine
+from src.etl.data_validation import validate_security_events
+
 
 def extract_data(file_path):
-    """
-    Extract raw cybersecurity event data from a CSV file.
-    """
+    """Extract cybersecurity events from a CSV file."""
     print("Extracting data...")
 
     df = pd.read_csv(file_path)
@@ -15,26 +16,20 @@ def extract_data(file_path):
 
 
 def transform_data(df):
-    """
-    Perform basic data cleaning and transformation.
-    """
+    """Clean and prepare cybersecurity event data."""
     print("Transforming data...")
 
     df = df.copy()
 
-    # Convert timestamp to datetime
     df["event_timestamp"] = pd.to_datetime(
         df["event_timestamp"],
         errors="coerce"
     )
 
-    # Remove rows with invalid timestamps
     df = df.dropna(subset=["event_timestamp"])
 
-    # Remove duplicate event IDs
     df = df.drop_duplicates(subset=["event_id"])
 
-    # Standardize text columns
     text_columns = [
         "event_type",
         "location",
@@ -44,12 +39,10 @@ def transform_data(df):
     ]
 
     for column in text_columns:
-        df[column] = df[column].astype(str).str.strip()
+        df[column] = df[column].astype("string").str.strip()
 
-    # Remove fields that are not part of the security_events database table
     df = df.drop(columns=["risk_indicator"], errors="ignore")
 
-    # Keep only columns required by the security_events table
     required_columns = [
         "event_id",
         "event_timestamp",
@@ -71,67 +64,26 @@ def transform_data(df):
 
     return df
 
-def load_data(df, table_name="security_events"):
-    """
-    Load transformed cybersecurity events into PostgreSQL.
-    """
-    print("Loading data into PostgreSQL...")
 
-    from src.database.db_connection import engine
-
-    df.to_sql(
-        table_name,
-        engine,
-        if_exists="append",
-        index=False
-    )
-
-    print(f"Loaded {len(df)} records into {table_name}.")
-
-if __name__ == "__main__":
-    file_path = "data/raw/security_events_raw.csv"
-
-    df = extract_data(file_path)
-
-    df = transform_data(df)
-    print("\nColumn data types:")
-    print(df[["user_id", "device_id", "ip_address"]].dtypes)
-
-    print("\nSample ID values:")
-    print(df[["user_id", "device_id", "ip_address"]].head())
-    
 def load_reference_data(df):
-    """
-    Load users, devices, and IP addresses required by security_events.
-    Existing records are skipped.
-    """
-    from src.database.db_connection import engine
+    """Load users, devices, and IP addresses before security events."""
 
     print("Loading reference data...")
 
     with engine.begin() as connection:
 
-        # Users
         users = df[["user_id"]].drop_duplicates()
 
         for _, row in users.iterrows():
             connection.execute(
-                text("""
+                __import__("sqlalchemy").text("""
                     INSERT INTO users (
-                        user_id,
-                        username,
-                        department,
-                        role,
-                        account_status,
-                        created_at
+                        user_id, username, department,
+                        role, account_status, created_at
                     )
                     VALUES (
-                        :user_id,
-                        :username,
-                        'General',
-                        'User',
-                        'Active',
-                        :created_at
+                        :user_id, :username, 'General',
+                        'User', 'Active', :created_at
                     )
                     ON CONFLICT (user_id) DO NOTHING
                 """),
@@ -142,33 +94,22 @@ def load_reference_data(df):
                 }
             )
 
-        # Devices
         devices = df[
             ["device_id", "user_id", "device_type", "os"]
         ].drop_duplicates(subset=["device_id"])
 
         for _, row in devices.iterrows():
             connection.execute(
-                text("""
+                __import__("sqlalchemy").text("""
                     INSERT INTO devices (
-                        device_id,
-                        user_id,
-                        device_type,
-                        operating_system,
-                        device_name,
-                        first_seen,
-                        last_seen,
-                        device_status
+                        device_id, user_id, device_type,
+                        operating_system, device_name,
+                        first_seen, last_seen, device_status
                     )
                     VALUES (
-                        :device_id,
-                        :user_id,
-                        :device_type,
-                        :operating_system,
-                        :device_name,
-                        :first_seen,
-                        :last_seen,
-                        'Active'
+                        :device_id, :user_id, :device_type,
+                        :operating_system, :device_name,
+                        :first_seen, :last_seen, 'Active'
                     )
                     ON CONFLICT (device_id) DO NOTHING
                 """),
@@ -183,33 +124,21 @@ def load_reference_data(df):
                 }
             )
 
-        # IP addresses
         ip_addresses = df[
             ["ip_address", "location"]
         ].drop_duplicates(subset=["ip_address"])
 
         for _, row in ip_addresses.iterrows():
             connection.execute(
-                text("""
+                __import__("sqlalchemy").text("""
                     INSERT INTO ip_addresses (
-                        ip_address,
-                        country,
-                        city,
-                        region,
-                        isp,
-                        ip_type,
-                        first_seen,
-                        last_seen
+                        ip_address, country, city, region,
+                        isp, ip_type, first_seen, last_seen
                     )
                     VALUES (
-                        :ip_address,
-                        'India',
-                        :city,
-                        'Unknown',
-                        'Synthetic ISP',
-                        'Private',
-                        :first_seen,
-                        :last_seen
+                        :ip_address, 'India', :city, 'Unknown',
+                        'Synthetic ISP', 'Private',
+                        :first_seen, :last_seen
                     )
                     ON CONFLICT (ip_address) DO NOTHING
                 """),
@@ -221,5 +150,32 @@ def load_reference_data(df):
                 }
             )
 
-    print("Reference data loaded successfully.")   
+    print("Reference data loaded successfully.")
+
+
+def load_data(df, table_name="security_events"):
+    """Load transformed events into PostgreSQL."""
+    print("Loading data into PostgreSQL...")
+
+    df.to_sql(
+        table_name,
+        engine,
+        if_exists="append",
+        index=False
+    )
+
+    print(f"Loaded {len(df)} records into {table_name}.")
+
+
+if __name__ == "__main__":
+    file_path = "data/raw/security_events_raw.csv"
+
+    df = extract_data(file_path)
+
+    df = transform_data(df)
+
+    validate_security_events(df)
+
+    load_reference_data(df)
+
     load_data(df)
