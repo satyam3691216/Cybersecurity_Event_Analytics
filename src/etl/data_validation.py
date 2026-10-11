@@ -77,7 +77,7 @@ if __name__ == "__main__":
         ],
         "location": ["Delhi", "Mumbai", "Delhi"],
         "device_type": ["Laptop", "Mobile", "Laptop"],
-        "os": ["Windows", "Android", "Windows"],
+        "operating_system": ["Windows", "Android", "Windows"],
         "auth_status": ["Success", "Success", "Failed"],
         "user_agent": ["Chrome", "Edge", "Chrome"],
         "session_id": ["S001", "S002", "S003"]
