@@ -15,7 +15,7 @@ def validate_security_events(df):
         "ip_address",
         "location",
         "device_type",
-        "os",
+        "operating_system",
         "auth_status",
         "user_agent",
         "session_id"

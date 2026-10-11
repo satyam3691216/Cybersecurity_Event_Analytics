@@ -60,6 +60,9 @@ def transform_data(df):
 
     df = df[required_columns]
 
+  # Match the operating system column name in PostgreSQL
+    df = df.rename(columns={"os": "operating_system"})
+
     print(f"Records after transformation: {len(df)}")
 
     return df
