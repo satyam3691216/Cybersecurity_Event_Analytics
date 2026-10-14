@@ -41,9 +41,15 @@ def generate_security_events(num_events=1000):
         device_owner[device_id]
         for device_id in device_ids
     ])
+    # Assign the first five events to one device and its owner
+    if num_events >= 5:
+        suspicious_device_id = device_ids_available[0]
+        suspicious_user_id = device_owner[suspicious_device_id]
 
+        device_ids[:5] = suspicious_device_id
+        user_ids[:5] = suspicious_user_id
     # --------------------------------------------------
-    # 2. Define security event types
+    # 2. Define event types
     # --------------------------------------------------
 
     event_types = [
@@ -59,8 +65,59 @@ def generate_security_events(num_events=1000):
         "admin_action"
     ]
 
+    # Generate event types once so authentication status
+    # can be derived consistently from the same values.
+    event_types_generated = np.random.choice(
+        event_types,
+        size=num_events
+    )
+    # Inject controlled suspicious-login scenarios
+    if num_events >= 5:
+        suspicious_device_id = device_ids_available[0]
+        suspicious_user_id = device_owner[suspicious_device_id]
+
+        suspicious_indices = np.arange(5)
+
+    for index in suspicious_indices:
+        event_types_generated[index] = "login_failed"
+        user_ids[index] = suspicious_user_id
+        device_ids[index] = suspicious_device_id
+
+    # Select 5 events to simulate repeated failed logins
+    suspicious_indices = np.arange(min(5, num_events))
+
+    for index in suspicious_indices:
+        event_types_generated[index] = "login_failed"
+        user_ids[index] = suspicious_user_id
+        device_ids[index] = suspicious_device_id
+
     # --------------------------------------------------
-    # 3. Generate synthetic security events
+    # 3. Generate authentication status
+    # --------------------------------------------------
+
+    auth_status = []
+
+    for event_type in event_types_generated:
+
+        if event_type == "login_failed":
+            auth_status.append("Failed")
+
+        elif event_type == "login_success":
+            auth_status.append("Success")
+
+        else:
+            # Other event types may have either status.
+            status = np.random.choice(
+                ["Success", "Failed"],
+                p=[0.85, 0.15]
+            )
+
+            auth_status.append(status)
+    # Ensure injected suspicious events have consistent authentication status
+    if num_events >= 5:
+        auth_status[:5] = ["Failed"] * 5
+    # --------------------------------------------------
+    # 4. Generate synthetic security events
     # --------------------------------------------------
 
     security_events = pd.DataFrame({
@@ -73,10 +130,7 @@ def generate_security_events(num_events=1000):
             freq="min"
         ),
 
-        "event_type": np.random.choice(
-            event_types,
-            num_events
-        ),
+        "event_type": event_types_generated,
 
         "user_id": user_ids,
 
@@ -101,7 +155,7 @@ def generate_security_events(num_events=1000):
                 "Chennai",
                 "Kolkata"
             ],
-            num_events
+            size=num_events
         ),
 
         "device_type": np.random.choice(
@@ -111,7 +165,7 @@ def generate_security_events(num_events=1000):
                 "Mobile",
                 "Tablet"
             ],
-            num_events
+            size=num_events
         ),
 
         "os": np.random.choice(
@@ -122,17 +176,10 @@ def generate_security_events(num_events=1000):
                 "Android",
                 "iOS"
             ],
-            num_events
+            size=num_events
         ),
 
-        "auth_status": np.random.choice(
-            [
-                "Success",
-                "Failed"
-            ],
-            num_events,
-            p=[0.85, 0.15]
-        ),
+        "auth_status": auth_status,
 
         "user_agent": np.random.choice(
             [
@@ -142,7 +189,7 @@ def generate_security_events(num_events=1000):
                 "Safari",
                 "MobileApp"
             ],
-            num_events
+            size=num_events
         ),
 
         "session_id": [
@@ -156,7 +203,7 @@ def generate_security_events(num_events=1000):
                 "Medium",
                 "High"
             ],
-            num_events,
+            size=num_events,
             p=[0.70, 0.25, 0.05]
         )
     })
@@ -168,7 +215,7 @@ def generate_security_events(num_events=1000):
 
 
 # --------------------------------------------------
-# 4. Run the generator and save the dataset
+# 5. Run the generator and save the dataset
 # --------------------------------------------------
 
 if __name__ == "__main__":
@@ -195,7 +242,7 @@ if __name__ == "__main__":
     print(df.head())
 
     # --------------------------------------------------
-    # 5. Verify device-to-user consistency
+    # 6. Verify device-to-user consistency
     # --------------------------------------------------
 
     device_user_counts = (
@@ -212,7 +259,37 @@ if __name__ == "__main__":
         int(inconsistent_devices)
     )
 
+    # --------------------------------------------------
+    # 7. Verify authentication consistency
+    # --------------------------------------------------
+
+    failed_login_inconsistencies = (
+        (
+            (df["event_type"] == "login_failed")
+            & (df["auth_status"] != "Failed")
+        )
+        |
+        (
+            (df["event_type"] == "login_success")
+            & (df["auth_status"] != "Success")
+        )
+    ).sum()
+
+    print(
+        "Authentication inconsistencies:",
+        int(failed_login_inconsistencies)
+    )
+
+    # --------------------------------------------------
+    # 8. Report validation results
+    # --------------------------------------------------
+
     if inconsistent_devices == 0:
         print("Device-to-user consistency check passed.")
     else:
         print("WARNING: Device-to-user inconsistency detected.")
+
+    if failed_login_inconsistencies == 0:
+        print("Authentication consistency check passed.")
+    else:
+        print("WARNING: Authentication inconsistencies detected.")
