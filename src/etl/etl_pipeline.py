@@ -343,10 +343,16 @@ def load_data(df, table_name="security_events"):
                 events_table
             ).values(batch)
 
-            statement = statement.on_conflict_do_nothing(
-                index_elements=["event_id"]
-            )
+            update_columns = {
+    column: getattr(statement.excluded, column)
+    for column in expected_columns
+    if column != "event_id"
+}
 
+            statement = statement.on_conflict_do_update(
+    index_elements=["event_id"],
+    set_=update_columns
+)
             result = connection.execute(statement)
 
             inserted_count += result.rowcount
