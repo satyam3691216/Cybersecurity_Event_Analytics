@@ -111,3 +111,35 @@ def calculate_event_risk(df):
     df["risk_level"] = df["rule_score"].apply(get_risk_level)
 
     return df
+def calculate_hybrid_risk(df):
+    """Combine rule-based and machine-learning anomaly scores."""
+
+    df = df.copy()
+
+    # Convert anomaly scores into a 0–100 scale.
+    min_score = df["anomaly_score"].min()
+    max_score = df["anomaly_score"].max()
+
+    if max_score == min_score:
+        df["normalized_anomaly_score"] = 0
+    else:
+        df["normalized_anomaly_score"] = (
+            (df["anomaly_score"] - min_score)
+            / (max_score - min_score)
+        ) * 100
+
+    # Combine rule-based and anomaly scores.
+    df["hybrid_score"] = (
+        0.60 * df["rule_score"]
+        + 0.40 * df["normalized_anomaly_score"]
+    ).round(2)
+
+    # Ensure scores remain between 0 and 100.
+    df["hybrid_score"] = df["hybrid_score"].clip(0, 100)
+
+    # Assign final risk levels.
+    df["hybrid_risk_level"] = df["hybrid_score"].apply(
+        get_risk_level
+    )
+
+    return df
