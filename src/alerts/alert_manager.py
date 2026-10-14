@@ -83,8 +83,6 @@ def generate_alerts(df):
 
     return result
 def save_alerts(alerts):
-    """Save generated security alerts to PostgreSQL."""
-
     if alerts.empty:
         print("No alerts to save.")
         return 0
@@ -98,15 +96,19 @@ def save_alerts(alerts):
             alert_status,
             created_at
         )
-        VALUES (
+        SELECT
             :event_id,
             :alert_type,
             :alert_message,
             :severity,
             'Open',
             CURRENT_TIMESTAMP
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM alerts
+            WHERE event_id = :event_id
+              AND alert_type = :alert_type
         )
-        ON CONFLICT DO NOTHING
     """)
 
     records = alerts[
@@ -119,5 +121,6 @@ def save_alerts(alerts):
     saved_count = result.rowcount
 
     print(f"New alerts saved: {saved_count}")
+    print(f"Duplicate alerts skipped: {len(alerts) - saved_count}")
 
     return saved_count
