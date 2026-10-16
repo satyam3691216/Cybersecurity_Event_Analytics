@@ -22,7 +22,7 @@ from src.alerts.alert_manager import (
     generate_alerts,
     save_alerts,
 )
-
+from src.risk_engine.risk_storage import save_risk_scores
 
 def run_security_analytics():
     """Execute the complete security analytics workflow."""
@@ -49,6 +49,9 @@ def run_security_analytics():
     # Step 4: Calculate hybrid risk scores.
     print("\nCalculating hybrid risk scores...")
     df = calculate_hybrid_risk(df)
+    # Step 5: Save risk scores to PostgreSQL.
+    print("\nSaving risk scores to PostgreSQL...")
+    saved_risks = save_risk_scores(df)
 
     # Step 5: Generate alerts.
     print("\nGenerating security alerts...")
