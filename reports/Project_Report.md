@@ -1124,3 +1124,1152 @@ and Tableau visualization.
 
 The next chapter describes the software tools and implementation
 modules used to construct the system.
+
+## Chapter 5: Implementation
+
+- Technologies used
+- Project folder structure
+- Python implementation modules
+- PostgreSQL integration
+- Risk score storage
+- Alert storage
+- SQL views
+- Tableau integration
+- Python execution outputs
+
+## Chapter 5: Implementation
+
+### 5.1 Introduction
+
+This chapter describes the implementation of the Automated
+Cybersecurity Event Analytics & Suspicious Activity Detection System.
+
+The project is divided into modules to separate data generation,
+data processing, database connectivity, risk assessment, anomaly
+detection, alert management, and visualization.
+
+The implementation uses Python for analytics and application logic,
+PostgreSQL for structured storage, and Tableau Public for presenting
+analytical results.
+
+### 5.2 Technologies Used
+
+The main technologies used in the project are:
+
+| Technology | Purpose |
+|---|---|
+| Python | Implements data processing and analytics |
+| pandas | Manipulates structured datasets |
+| NumPy | Supports numerical operations |
+| scikit-learn | Implements Isolation Forest |
+| PostgreSQL | Stores event and analytical records |
+| SQLAlchemy | Supports database connectivity |
+| psycopg2 | Provides PostgreSQL connectivity |
+| Tableau Public | Visualizes analytical results |
+| Git | Tracks changes to project files |
+| GitHub | Hosts the project repository |
+| Visual Studio Code | Provides the development environment |
+
+### 5.3 Project Folder Structure
+
+The project follows a modular directory structure.
+
+Important directories include:
+
+- `data/`: Contains the project's data directories.
+- `database/sql/`: Contains database schema and SQL view scripts.
+- `src/data_generator/`: Contains synthetic data generation code.
+- `src/etl/`: Contains data processing and validation modules.
+- `src/analytics/`: Contains analytical processing code.
+- `src/risk_engine/`: Contains risk scoring and storage modules.
+- `src/anomaly_detection/`: Contains anomaly detection code.
+- `src/alerts/`: Contains alert management code.
+- `notebooks/`: Provides a location for exploratory analysis.
+- `tableau/`: Contains dashboard-related documentation.
+- `reports/`: Contains project report documentation.
+- `tests/`: Provides a location for testing code.
+
+The separation of responsibilities makes the project easier to
+understand, maintain, and extend.
+
+### 5.4 Synthetic Data Generation
+
+The synthetic data generator creates security event records
+and supporting user and device information.
+
+The current dataset contains 1,000 security events.
+
+Synthetic records allow the project to demonstrate data
+processing, risk scoring, and anomaly detection without
+requiring real user security logs.
+
+The generated data is stored in the project's data directories
+and processed by subsequent pipeline components.
+
+### 5.5 Data Processing and Validation
+
+The ETL modules prepare data for analysis and database operations.
+
+Data validation helps identify inconsistencies that could affect
+the reliability of analytical results.
+
+Validation checks performed during development included checking
+device ownership consistency and authentication-related
+inconsistencies.
+
+The generator was corrected so that the reported checks showed
+zero devices associated with multiple users and zero authentication
+inconsistencies.
+
+These checks validate specific properties of the synthetic dataset;
+they do not establish that every possible data-quality issue has
+been eliminated.
+
+### 5.6 PostgreSQL Integration
+
+PostgreSQL provides structured storage for security events and
+analytical results.
+
+The project database is named `cybersecurity_db`.
+
+The database schema defines tables for users, devices, IP addresses,
+security events, login history, risk events, and alerts.
+
+Python modules communicate with PostgreSQL through the configured
+database connection.
+
+Database credentials are maintained in environment configuration
+rather than being embedded directly in source code.
+
+The `.env` file must not be committed to the public repository.
+
+### 5.7 Rule-Based Risk Scoring
+
+The risk-scoring module assigns points based on configured
+security event conditions.
+
+The implementation considers failed login activity and applies
+additional points when the failed-login count reaches the
+specified threshold.
+
+The maximum rule-based score is capped at 100.
+
+The current event-level calculation uses a rolling five-minute
+failed-login count per user.
+
+Although the scoring function supports new-IP and new-device
+flags, the current event-level calculation passes `False` for
+both flags. These factors therefore do not contribute to the
+current event-level scores.
+
+### 5.8 Anomaly Detection Implementation
+
+The anomaly detection module uses the Isolation Forest algorithm
+from scikit-learn.
+
+The model operates on selected event features, including failed
+login activity, successful login activity, authentication failure
+status, hour of day, and user event frequency.
+
+The model configuration includes a contamination parameter of
+0.05 and a random state of 42.
+
+The model identifies statistical anomalies in the dataset.
+An anomaly is not automatically a confirmed security incident.
+
+Because the dataset does not contain verified attack labels,
+the current implementation cannot establish real-world attack
+detection accuracy from these results alone.
+
+### 5.9 Hybrid Risk Score Calculation
+
+The hybrid scoring module combines rule-based risk scores and
+normalized anomaly scores.
+
+The implemented formula is:
+
+Hybrid Score = (0.60 × Rule Score) + (0.40 × Anomaly Score)
+
+The anomaly score is normalized to a scale of 0 to 100 before
+the weighted combination is calculated.
+
+The resulting score is used to classify events into Low, Medium,
+and High risk categories.
+
+The weights and thresholds are configurable design choices
+for the prototype.
+
+### 5.10 Risk Score Storage
+
+The risk storage module saves analytical results in the
+`risk_events` table.
+
+The stored fields include:
+
+- Event identifier
+- Rule-based score
+- Anomaly score
+- Hybrid score
+- Risk level
+
+The database uses a unique index on the event identifier to
+help prevent duplicate risk records.
+
+The implementation uses conflict-handling logic so that
+repeated attempts to store an already-recorded event do not
+create additional risk records.
+
+### 5.11 Alert Management
+
+The alert management module evaluates hybrid risk scores and
+selects events that meet the configured alert threshold.
+
+The current threshold is 40.
+
+Eligible events receive an alert with a type and severity.
+Scores from 40 to below 70 receive Medium severity, while
+scores of 70 or above receive High severity.
+
+Alerts are stored in the `alerts` table.
+
+A unique index on the combination of event identifier and
+alert type helps prevent duplicate alerts.
+
+The alert manager is intended to prioritize events for review
+rather than declare that an attack has been confirmed.
+
+### 5.12 SQL Views and Analytical Queries
+
+The SQL view definitions are stored in:
+
+`database/sql/tableau_views.sql`
+
+The project includes these views:
+
+- `vw_risk_overview`
+- `vw_security_event_analysis`
+- `vw_alert_monitoring`
+
+The views organize information from the underlying tables
+for reporting and dashboard preparation.
+
+They provide a consistent way to retrieve risk summaries,
+event-level analytical data, and alert information.
+
+### 5.13 Tableau Integration
+
+Tableau Public is used to visualize the analytical results.
+
+The current workflow exports selected SQL view results to
+CSV files and imports those files into Tableau.
+
+The dashboard contains three principal charts:
+
+1. Security Risk Distribution
+2. Average Hybrid Risk Score by Risk Level
+3. Security Events by Type Over Time
+
+The first chart summarizes the number of events in each risk
+category. The second compares average hybrid risk scores.
+The third displays event activity over time by event type.
+
+Because the current workflow uses CSV snapshots, changes in
+the database are not reflected automatically. Updated results
+must be exported and imported when the dashboard needs refreshing.
+
+### 5.14 Implementation Results
+
+During a recorded execution of the analytical pipeline,
+the system stored 1,000 risk records.
+
+The observed risk distribution was:
+
+| Risk Level | Number of Events | Average Hybrid Score |
+|---|---:|---:|
+| Low | 985 | 13.31 |
+| Medium | 15 | 43.66 |
+| High | 0 | Not applicable |
+
+The system also produced 15 open Medium alerts in the recorded
+execution.
+
+These values describe the observed synthetic dataset and
+execution. They should not be interpreted as evidence of
+real-world cybersecurity detection performance.
+
+The absence of High-risk events indicates that the High-severity
+path should be tested explicitly before its behaviour is
+considered fully validated.
+
+### 5.15 Chapter Summary
+
+This chapter described the major implementation components,
+including synthetic data generation, validation, PostgreSQL
+integration, risk scoring, anomaly detection, hybrid scoring,
+risk storage, alert management, SQL views, and Tableau
+visualization.
+
+The observed results provide a baseline for the testing and
+validation activities discussed in the next chapter.
+
+## Chapter 6: Testing and Validation
+
+- Testing strategy
+- Test cases
+- Data consistency checks
+- Database integrity checks
+- Duplicate alert prevention
+- Test results and limitations
+
+## Chapter 6: Testing and Validation
+
+### 6.1 Introduction
+
+Software testing is an important stage of system development.
+It helps verify whether individual components and integrated
+workflows behave according to their intended requirements.
+
+The Automated Cybersecurity Event Analytics & Suspicious Activity
+Detection System includes data generation, data validation,
+database storage, risk scoring, anomaly detection, and alert
+management components.
+
+Testing focuses on data consistency, analytical calculations,
+database integrity, alert generation, and the correctness of
+the results presented for visualization.
+
+The project uses synthetic security event data. Therefore,
+the testing results demonstrate the behaviour of the prototype
+rather than its effectiveness against real-world cyberattacks.
+
+### 6.2 Testing Strategy
+
+The testing strategy covers the following areas:
+
+#### 6.2.1 Data Validation Testing
+
+Data validation testing checks whether the generated records
+satisfy the expected data requirements.
+
+The checks include device ownership consistency and
+authentication-related consistency.
+
+#### 6.2.2 Database Testing
+
+Database testing checks whether analytical results and alerts
+are stored correctly.
+
+It also examines database constraints intended to prevent
+duplicate risk records and duplicate alerts.
+
+#### 6.2.3 Risk Scoring Testing
+
+Risk scoring testing examines whether the configured scoring
+rules and thresholds produce the expected scores and risk
+categories.
+
+The tests should include ordinary events, events with repeated
+failed logins, and boundary values around classification
+thresholds.
+
+#### 6.2.4 Anomaly Detection Testing
+
+Anomaly detection testing checks whether the Isolation Forest
+model can process the selected features and produce anomaly
+predictions or scores.
+
+The output should be interpreted as statistical unusualness,
+not as proof of malicious activity.
+
+#### 6.2.5 Alert Testing
+
+Alert testing checks whether events meeting the configured
+hybrid-score threshold are selected for alert generation.
+
+It also checks whether repeated processing creates duplicate
+alert records.
+
+#### 6.2.6 Integration Testing
+
+Integration testing evaluates whether the components work
+together across the complete analytical workflow.
+
+This includes processing event data, calculating risk scores,
+storing results, generating alerts, and preparing data for
+visualization.
+
+### 6.3 Test Environment
+
+The project was developed using the following environment:
+
+| Component | Technology |
+|---|---|
+| Operating system | Windows |
+| Development environment | Visual Studio Code |
+| Programming language | Python |
+| Data processing | pandas and NumPy |
+| Machine learning | scikit-learn |
+| Database | PostgreSQL |
+| Database connectivity | SQLAlchemy and psycopg2 |
+| Visualization | Tableau Public |
+| Version control | Git and GitHub |
+
+Exact software versions should be recorded from the installed
+environment before final submission.
+
+### 6.4 Test Cases
+
+The following test cases define the intended validation of
+the project. The execution status must reflect actual test
+results.
+
+| Test ID | Test Description | Expected Result |
+|---|---|---|
+| TC-01 | Generate synthetic security events | Event records are generated |
+| TC-02 | Check device ownership consistency | No device is incorrectly associated with multiple users |
+| TC-03 | Check authentication-related consistency | Records satisfy the configured authentication rules |
+| TC-04 | Calculate a rule-based risk score | A numeric score is returned |
+| TC-05 | Check maximum risk score | The rule-based score does not exceed 100 |
+| TC-06 | Check risk classification thresholds | Scores are assigned to the appropriate risk category |
+| TC-07 | Run Isolation Forest | The model produces anomaly predictions |
+| TC-08 | Calculate hybrid risk scores | A hybrid score is calculated from the configured components |
+| TC-09 | Store risk results | Risk records are stored in PostgreSQL |
+| TC-10 | Process an event repeatedly | Duplicate risk records are prevented |
+| TC-11 | Generate an eligible alert | An alert is created when the configured conditions are met |
+| TC-12 | Process an already-alerted event | An additional duplicate alert is prevented |
+| TC-13 | Query analytical SQL views | The expected view results can be retrieved |
+| TC-14 | Import exported data into Tableau | The CSV snapshot can be used for visualization |
+
+The expected results describe the behaviour to be checked.
+A test should be marked as passed only after its actual result
+has been observed.
+
+### 6.5 Data Consistency Testing
+
+Data consistency testing examines relationships between
+generated users, devices, and authentication-related fields.
+
+During development, the synthetic data generator was corrected
+to maintain consistent device ownership and authentication
+information.
+
+The recorded validation output was:
+
+- Devices associated with multiple users: 0
+- Authentication inconsistencies: 0
+
+These results indicate that the two specific checks found no
+inconsistencies in that execution.
+
+They do not prove that the dataset is free from every possible
+data-quality issue.
+
+### 6.6 Database Integrity Testing
+
+Database integrity is supported by constraints and indexes.
+
+The project includes a unique index on the event identifier
+in the risk results table.
+
+It also includes a unique index on the combination of event
+identifier and alert type in the alerts table.
+
+These constraints help prevent duplicate records for the
+specified keys.
+
+The risk storage module uses conflict-handling logic to avoid
+inserting duplicate risk records.
+
+The alert manager also checks for existing alerts. The unique
+index provides an additional database-level safeguard.
+
+Database integrity should be verified using SQL queries that
+check record counts, duplicate keys, and the relationships
+between stored events and their analytical results.
+
+### 6.7 Risk Scoring Validation
+
+Risk scoring validation checks the behaviour of the configured
+rules and classification thresholds.
+
+The current rule-based scoring function assigns points for
+failed login activity and applies additional points when the
+failed-login count reaches the configured threshold.
+
+The maximum rule-based score is 100.
+
+Risk categories are defined as:
+
+| Score | Risk Category |
+|---|---|
+| Below 40 | Low |
+| 40 to below 70 | Medium |
+| 70 to 100 | High |
+
+Testing should include scores immediately below, at, and above
+the classification boundaries.
+
+The event-level calculation currently uses a rolling five-minute
+failed-login count per user. The new-IP and new-device flags are
+passed as False, so these factors are not active contributors
+to the current event-level score.
+
+### 6.8 Anomaly Detection Validation
+
+The Isolation Forest component processes selected numerical
+features and identifies observations that differ from patterns
+in the dataset.
+
+Validation should confirm that the model runs successfully,
+produces predictions, and provides outputs that can be used
+by the hybrid scoring component.
+
+The model uses a contamination parameter of 0.05 and a
+random state of 42.
+
+Because the dataset does not contain verified attack labels,
+the current project cannot calculate reliable real-world
+precision, recall, or attack detection accuracy.
+
+A statistical anomaly should not automatically be interpreted
+as a confirmed security incident.
+
+### 6.9 Alert Generation Validation
+
+The alert manager generates alerts for events whose hybrid
+risk score meets or exceeds 40.
+
+Severity is assigned according to the configured thresholds:
+
+- Medium: score of 40 to below 70.
+- High: score of 70 or above.
+
+During a recorded execution, the system stored 15 open
+Medium alerts.
+
+No duplicate combinations of event identifier and alert
+type were observed in that recorded result.
+
+The recorded execution contained no High-risk events.
+Therefore, the High-severity alert path should be tested
+explicitly before it is considered validated.
+
+### 6.10 Recorded Execution Results
+
+The following results were recorded during development:
+
+| Metric | Recorded Result |
+|---|---:|
+| Synthetic security events | 1,000 |
+| Risk records stored | 1,000 |
+| Low-risk events | 985 |
+| Medium-risk events | 15 |
+| High-risk events | 0 |
+| Open Medium alerts | 15 |
+| Devices associated with multiple users | 0 |
+| Authentication inconsistencies | 0 |
+
+These values describe the recorded synthetic dataset and
+execution.
+
+They are not measures of detection accuracy, and they should
+be updated if a later execution produces different results.
+
+### 6.11 Testing Limitations
+
+The current testing process has several limitations.
+
+First, the dataset is synthetic and may not represent the
+diversity of real-world cybersecurity activity.
+
+Second, there are no verified attack labels for measuring
+the detection performance of the anomaly detection model.
+
+Third, the absence of High-risk events in the recorded execution
+means that the High-severity alert path requires additional
+testing.
+
+Fourth, testing the alert manager sequentially does not
+necessarily establish correct behaviour under concurrent
+database operations.
+
+Finally, the dashboard uses CSV snapshots rather than a
+continuously refreshed live database connection.
+
+These limitations should be considered when interpreting
+the results.
+
+### 6.12 Chapter Summary
+
+This chapter described the testing strategy, test cases,
+data consistency checks, database integrity, risk scoring,
+anomaly detection, and alert generation.
+
+The recorded results demonstrate that the prototype processed
+the synthetic dataset and stored its analytical outputs.
+
+Further testing, particularly around risk thresholds,
+High-severity alerts, and concurrent operations, is needed
+to strengthen confidence in the implementation.
+
+## Chapter 7: Results and Discussion
+
+- Risk classification results
+- Hybrid risk score analysis
+- Alert generation results
+- Tableau dashboard analysis
+- Interpretation of results
+
+## Chapter 7: Results and Discussion
+
+### 7.1 Introduction
+
+This chapter presents and interprets the results obtained from
+the Automated Cybersecurity Event Analytics & Suspicious Activity
+Detection System.
+
+The analysis focuses on risk classification, hybrid risk scores,
+alert generation, and dashboard visualization.
+
+The results discussed in this chapter come from the recorded
+execution of the prototype using synthetic security event data.
+They demonstrate the analytical workflow but do not establish
+real-world cyberattack detection accuracy.
+
+### 7.2 Dataset Overview
+
+The system processed a synthetic dataset containing 1,000
+security events.
+
+The dataset was designed to demonstrate event processing,
+risk assessment, anomaly detection, and alert generation.
+
+Supporting database records provide information associated
+with users, devices, IP addresses, and security events.
+
+Using synthetic data allows controlled experimentation without
+requiring real users' security logs.
+
+However, the generated dataset may not represent the complete
+range of behaviour observed in an actual organizational network.
+
+### 7.3 Risk Classification Results
+
+During the recorded execution, the system produced the following
+risk distribution:
+
+| Risk Level | Number of Events | Percentage |
+|---|---:|---:|
+| Low | 985 | 98.5% |
+| Medium | 15 | 1.5% |
+| High | 0 | 0% |
+| Total | 1,000 | 100% |
+
+The majority of events were classified as Low risk.
+
+Fifteen events were classified as Medium risk, while no events
+were classified as High risk.
+
+This distribution reflects the synthetic dataset, the selected
+features, the configured scoring rules, and the model output.
+
+It does not demonstrate that the system can detect 98.5% of
+legitimate activity or that only 1.5% of real-world events
+are suspicious.
+
+### 7.4 Hybrid Risk Score Analysis
+
+The recorded average hybrid risk scores were:
+
+| Risk Level | Average Hybrid Risk Score |
+|---|---:|
+| Low | 13.31 |
+| Medium | 43.66 |
+| High | Not applicable |
+
+The average score for Medium-risk events was higher than
+the average score for Low-risk events.
+
+This is consistent with the configured classification thresholds:
+Medium-risk events have scores of at least 40, while Low-risk
+events have scores below 40.
+
+The hybrid score combines the rule-based score and the normalized
+anomaly score:
+
+Hybrid Score = (0.60 × Rule Score) + (0.40 × Anomaly Score)
+
+The rule-based component contributes 60% of the score, while
+the normalized anomaly component contributes 40%.
+
+The resulting score provides a combined analytical indicator.
+It should not be interpreted as a calibrated probability that
+an event is malicious.
+
+### 7.5 Alert Generation Results
+
+The recorded execution produced 15 open Medium alerts.
+
+The alert manager selects events whose hybrid risk score meets
+or exceeds the configured threshold of 40.
+
+The severity classification is:
+
+- Medium: hybrid score from 40 to below 70.
+- High: hybrid score of 70 or above.
+
+The recorded results contained no High-risk events.
+
+Consequently, the execution demonstrates the Medium-alert
+workflow but does not demonstrate a High-severity alert being
+generated.
+
+The High-severity path should be tested separately using a
+controlled test case.
+
+Alerts should be treated as records requiring review rather
+than confirmation of a cyberattack.
+
+### 7.6 Database Results
+
+The recorded execution stored 1,000 risk records in PostgreSQL.
+
+The risk results contain information about the event identifier,
+rule-based score, anomaly score, hybrid score, and risk level.
+
+The database uses a unique index on the event identifier in
+the risk results table to help prevent duplicate risk records.
+
+A unique index on the combination of event identifier and
+alert type helps prevent duplicate alert records.
+
+No duplicate combinations of event identifier and alert type
+were observed in the recorded alert results.
+
+These results provide evidence of the observed database state.
+They do not, by themselves, establish that every possible
+database failure or concurrent operation has been tested.
+
+### 7.7 Tableau Dashboard Analysis
+
+The Tableau dashboard presents three principal visualizations.
+
+#### 7.7.1 Security Risk Distribution
+
+This visualization displays the number of events in each
+risk category.
+
+The recorded distribution is dominated by Low-risk events,
+with 15 Medium-risk events and no High-risk events.
+
+The chart provides a quick overview of how the system's
+configured risk classifications are distributed.
+
+#### 7.7.2 Average Hybrid Risk Score by Risk Level
+
+This chart compares the average hybrid score for each risk
+category.
+
+The recorded averages are 13.31 for Low-risk events and
+43.66 for Medium-risk events.
+
+No average is available for High-risk events because none
+were present in the recorded results.
+
+#### 7.7.3 Security Events by Type Over Time
+
+This visualization displays event activity over time and
+distinguishes event types.
+
+It can help users explore changes in the volume and composition
+of generated security events.
+
+The chart represents the synthetic event data and should not
+be interpreted as evidence of real-world attack trends.
+
+### 7.8 Interpretation of Results
+
+The recorded results demonstrate that the prototype can
+process a synthetic event dataset, calculate hybrid risk
+scores, store analytical records, and generate Medium alerts.
+
+The risk distribution and average scores provide a useful
+summary of the configured analytical workflow.
+
+However, the absence of High-risk events leaves the High-severity
+alert path unverified by the recorded execution.
+
+The current implementation also passes False for the new-IP
+and new-device flags in the event-level rule calculation.
+Therefore, those factors do not currently contribute to the
+event-level scores.
+
+In addition, the absence of verified attack labels means
+that the results cannot establish precision, recall, or
+real-world detection accuracy.
+
+Further validation with labelled data and additional controlled
+test scenarios would be necessary to assess detection performance.
+
+### 7.9 Limitations of the Results
+
+The results have the following limitations:
+
+1. The dataset contains synthetic rather than real security events.
+2. The risk distribution depends on the generated data and configured
+   analytical parameters.
+3. No verified attack labels are available for evaluating model
+   accuracy against confirmed attacks.
+4. The High-risk category was empty in the recorded execution.
+5. The current event-level rule calculation does not activate the
+   new-IP and new-device scoring flags.
+6. Tableau uses CSV snapshots rather than automatic live updates.
+7. The prototype has not been validated in a production network.
+
+These limitations must be considered when interpreting the results
+or comparing the prototype with other security systems.
+
+### 7.10 Chapter Summary
+
+This chapter presented the recorded results of the prototype.
+
+The system processed 1,000 synthetic security events, stored
+1,000 risk records, and generated 15 open Medium alerts.
+
+The observed risk distribution contained 985 Low-risk events,
+15 Medium-risk events, and no High-risk events.
+
+The Tableau dashboard provides a visual summary of these results.
+
+The findings demonstrate the integration of data processing,
+risk scoring, anomaly detection, database storage, alert generation,
+and visualization. Additional testing and labelled data are
+required before drawing conclusions about real-world detection
+performance.
+
+## Chapter 8: Conclusion and Future Scope
+
+- Project summary
+- Achievements
+- Current limitations
+- Future enhancements
+- Conclusion
+
+## Chapter 8: Conclusion and Future Scope
+
+### 8.1 Project Summary
+
+The Automated Cybersecurity Event Analytics & Suspicious Activity
+Detection System was developed to demonstrate how data analytics
+and machine learning can support security event monitoring.
+
+The project integrates synthetic data generation, data validation,
+PostgreSQL storage, rule-based risk scoring, Isolation Forest
+anomaly detection, hybrid risk scoring, alert generation, and
+Tableau visualization.
+
+Python is used for data processing and analytical operations.
+PostgreSQL stores security event information and analytical results.
+Tableau presents selected results through visualizations.
+
+The system follows a modular architecture, allowing its individual
+components to be maintained, tested, and improved independently.
+
+### 8.2 Project Achievements
+
+The following outcomes were recorded during development:
+
+1. Generated a synthetic dataset containing 1,000 security events.
+2. Implemented data consistency checks for device ownership and
+   authentication-related information.
+3. Integrated PostgreSQL for storing security events and analytical
+   results.
+4. Implemented rule-based risk scoring.
+5. Applied Isolation Forest to selected security event features.
+6. Combined rule-based and normalized anomaly scores using a hybrid
+   scoring formula.
+7. Stored 1,000 risk records during the recorded execution.
+8. Generated 15 open Medium alerts during the recorded execution.
+9. Created SQL views for analytical reporting.
+10. Developed a Tableau dashboard for examining risk distribution,
+    average hybrid scores, and event activity over time.
+11. Organized the project into separate modules to support
+    maintainability and future development.
+
+These achievements describe the implemented prototype and its
+recorded execution. They do not establish real-world cybersecurity
+detection accuracy.
+
+### 8.3 Learning Outcomes
+
+The project provided practical experience in several areas of
+data analytics and software development.
+
+#### Data Engineering
+
+The project demonstrated synthetic data generation, data validation,
+structured storage, and the preparation of analytical datasets.
+
+#### Database Management
+
+PostgreSQL was used to organize security event records and analytical
+results. SQL views and database constraints supported reporting
+and data integrity.
+
+#### Python Analytics
+
+Python and pandas were used for processing and analyzing structured
+security event information.
+
+#### Machine Learning
+
+Isolation Forest was used to identify statistically unusual
+observations without requiring labelled attack examples.
+
+#### Analytical Scoring
+
+The hybrid scoring approach demonstrated how rule-based indicators
+can be combined with an anomaly score.
+
+#### Data Visualization
+
+Tableau was used to present analytical results in a dashboard
+designed to make risk distributions and event patterns easier
+to interpret.
+
+#### Version Control
+
+Git and GitHub were used to maintain and publish the project's
+source code and documentation.
+
+### 8.4 Current Limitations
+
+The current implementation has several limitations.
+
+First, it uses synthetic data rather than real security logs.
+Consequently, the generated event patterns may not reflect
+real organizational environments.
+
+Second, the dataset does not contain verified attack labels.
+Therefore, the system's precision, recall, and real-world
+detection accuracy have not been established.
+
+Third, the new-IP and new-device flags are not activated in
+the current event-level rule calculation.
+
+Fourth, the recorded execution contained no High-risk events.
+The High-severity alert workflow therefore requires additional
+controlled testing.
+
+Fifth, the alert manager's sequential duplicate checks do not
+by themselves establish safe behaviour under concurrent database
+operations.
+
+Sixth, Tableau currently uses exported CSV snapshots, which
+must be refreshed when the underlying analytical results change.
+
+Finally, the prototype does not provide continuous monitoring
+of a live network and has not been validated in a production
+cybersecurity environment.
+
+### 8.5 Future Scope
+
+Several enhancements could extend the capabilities of the project.
+
+#### 8.5.1 Integration with Real Security Logs
+
+Future development could support authorized security log sources,
+such as operating system authentication logs or application audit
+records.
+
+Real data would require suitable access controls, privacy safeguards,
+data validation, and secure storage.
+
+#### 8.5.2 Real-Time Event Processing
+
+The system could be extended to process incoming events continuously
+rather than relying on a generated dataset and batch execution.
+
+A message broker or event-streaming platform could support
+higher-volume event ingestion.
+
+#### 8.5.3 Improved User and Device Behaviour Analysis
+
+The new-IP and new-device indicators could be calculated using
+historical activity associated with each user and device.
+
+This would allow the scoring engine to consider contextual changes
+rather than relying only on failed login counts.
+
+The implementation would need careful handling of missing history,
+legitimate device changes, and false positives.
+
+#### 8.5.4 Improved Risk Scoring
+
+The scoring thresholds and hybrid weights could be evaluated
+using a labelled validation dataset.
+
+Alternative weighting methods could be compared using suitable
+evaluation metrics and a documented validation procedure.
+
+#### 8.5.5 Model Evaluation
+
+A future version could use labelled security datasets to evaluate
+precision, recall, F1-score, and the precision-recall trade-off.
+
+Evaluation should account for class imbalance and the cost of
+false positives and false negatives.
+
+Results should be reported on data that was not used to train
+or tune the model.
+
+#### 8.5.6 Improved Alert Management
+
+Alert management could be extended with alert acknowledgement,
+investigation status, timestamps, and analyst notes.
+
+Database operations could also be strengthened to handle
+concurrent processing safely.
+
+#### 8.5.7 Automated Dashboard Refresh
+
+The visualization workflow could be improved by using an
+appropriate supported database connection or automated data
+refresh process.
+
+This would reduce the need to manually export and import CSV
+snapshots.
+
+#### 8.5.8 Additional Analytical Features
+
+Further analysis could include login frequency by user,
+event activity by hour, failed login trends, unusual device
+usage, and comparisons of risk scores across event categories.
+
+Additional features should be introduced only when their
+definitions and data quality are clearly established.
+
+#### 8.5.9 Deployment and Monitoring
+
+A future version could be deployed as a web-based analytical
+application with authentication, role-based access, logging,
+and operational monitoring.
+
+Such deployment would require additional security testing,
+reliability controls, and maintenance procedures.
+
+### 8.6 Conclusion
+
+The Automated Cybersecurity Event Analytics & Suspicious Activity
+Detection System demonstrates the integration of data engineering,
+database management, machine learning, risk scoring, alert generation,
+and visualization in an academic prototype.
+
+The recorded execution processed 1,000 synthetic security events,
+stored 1,000 risk records, and generated 15 open Medium alerts.
+
+The project provides practical experience in using Python,
+PostgreSQL, scikit-learn, SQL, and Tableau to build an analytical
+workflow.
+
+However, the results are limited to the synthetic dataset and
+the implemented configuration. They do not establish the system's
+ability to detect real cyberattacks accurately.
+
+The project provides a foundation for further work involving
+realistic datasets, improved contextual risk indicators, stronger
+testing, and more automated monitoring.
+
+## Chapter 9: References
+
+- Python documentation
+- PostgreSQL documentation
+- pandas documentation
+- scikit-learn documentation
+- Tableau documentation
+
+## Chapter 9: References
+
+The following official documentation resources were consulted or
+are recommended for understanding the technologies used in this
+project. Include a resource in the final submitted bibliography
+only if it was actually consulted during development or writing.
+
+1. Python Software Foundation. Python Documentation.
+   https://docs.python.org/3/
+
+2. PostgreSQL Global Development Group. PostgreSQL Documentation.
+   https://www.postgresql.org/docs/
+
+3. pandas Development Team. pandas Documentation.
+   https://pandas.pydata.org/docs/
+
+4. NumPy Developers. NumPy Documentation.
+   https://numpy.org/doc/
+
+5. scikit-learn Developers. Isolation Forest Documentation.
+   https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html
+
+6. SQLAlchemy Authors. SQLAlchemy Documentation.
+   https://docs.sqlalchemy.org/
+
+7. Tableau. Tableau Help.
+   https://help.tableau.com/
+
+8. GitHub. GitHub Documentation.
+   https://docs.github.com/
+
+9. Git. Git Documentation.
+   https://git-scm.com/doc
+
+---
+
+## Appendices
+
+### Appendix A: Project Directory Structure
+
+The project is organized into modules for data generation, data
+processing, analytics, risk scoring, anomaly detection, alert
+management, database operations, visualization, and documentation.
+
+Important directories include:
+
+- `data/`
+- `database/sql/`
+- `src/data_generator/`
+- `src/etl/`
+- `src/analytics/`
+- `src/risk_engine/`
+- `src/anomaly_detection/`
+- `src/alerts/`
+- `notebooks/`
+- `tableau/`
+- `reports/`
+- `tests/`
+
+### Appendix B: Database Tables
+
+The database schema includes the following principal tables:
+
+| Table | Description |
+|---|---|
+| `users` | User-related information |
+| `devices` | Device-related information |
+| `ip_addresses` | IP address records |
+| `security_events` | Security event records |
+| `login_history` | Login-related records |
+| `risk_events` | Risk scores and classifications |
+| `alerts` | Generated alert records |
+
+Refer to `database/sql/schema.sql` for the actual table definitions.
+
+### Appendix C: SQL Verification Queries
+
+The following queries can be used to inspect the recorded results.
+
+#### C.1 Count security events
+
+```sql
+SELECT COUNT(*) AS total_security_events
+FROM security_events;
+
