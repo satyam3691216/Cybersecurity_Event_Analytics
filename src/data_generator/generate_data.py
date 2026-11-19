@@ -41,13 +41,8 @@ def generate_security_events(num_events=1000):
         device_owner[device_id]
         for device_id in device_ids
     ])
-    # Assign the first five events to one device and its owner
-    if num_events >= 5:
-        suspicious_device_id = device_ids_available[0]
-        suspicious_user_id = device_owner[suspicious_device_id]
-
-        device_ids[:5] = suspicious_device_id
-        user_ids[:5] = suspicious_user_id
+    suspicious_device_id = device_ids_available[0]
+    suspicious_user_id = device_owner[suspicious_device_id]
     # --------------------------------------------------
     # 2. Define event types
     # --------------------------------------------------
@@ -71,20 +66,11 @@ def generate_security_events(num_events=1000):
         event_types,
         size=num_events
     )
-    # Inject controlled suspicious-login scenarios
+    # Inject a controlled repeated-failed-login scenario.
     if num_events >= 5:
-        suspicious_device_id = device_ids_available[0]
-        suspicious_user_id = device_owner[suspicious_device_id]
-
         suspicious_indices = np.arange(5)
-
-    for index in suspicious_indices:
-        event_types_generated[index] = "login_failed"
-        user_ids[index] = suspicious_user_id
-        device_ids[index] = suspicious_device_id
-
-    # Select 5 events to simulate repeated failed logins
-    suspicious_indices = np.arange(min(5, num_events))
+    else:
+        suspicious_indices = np.arange(num_events)
 
     for index in suspicious_indices:
         event_types_generated[index] = "login_failed"

@@ -137,6 +137,10 @@ ON alerts(severity);
 
 CREATE INDEX idx_alerts_status
 ON alerts(alert_status);
+-- Prevent duplicate risk records for the same event.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_risk_events_event_unique
+ON risk_events (event_id);
+
 -- Prevent duplicate alerts for the same event and alert type.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_alerts_event_type_unique
 ON alerts (event_id, alert_type);

@@ -1,11 +1,6 @@
 pandas
 numpy
 scikit-learn
-matplotlib
-seaborn
-plotly
-sqlalchemy
+SQLAlchemy
 psycopg2-binary
-jupyter
-openpyxl
 python-dotenv

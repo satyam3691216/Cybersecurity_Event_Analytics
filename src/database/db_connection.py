@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 
 load_dotenv()
 
@@ -17,26 +17,3 @@ DATABASE_URL = (
 )
 
 engine = create_engine(DATABASE_URL)
-
-try:
-    with engine.connect() as connection:
-        result = connection.execute(
-            text("""
-                SELECT table_name
-                FROM information_schema.tables
-                WHERE table_schema = 'public'
-                ORDER BY table_name
-            """)
-        )
-
-        tables = [row[0] for row in result]
-
-        print("PostgreSQL connection successful.")
-        print("Tables found:")
-
-        for table in tables:
-            print("-", table)
-
-except Exception as e:
-    print("PostgreSQL connection failed.")
-    print("Error:", e)

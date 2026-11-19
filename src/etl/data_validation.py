@@ -1,6 +1,3 @@
-import pandas as pd
-
-
 def validate_security_events(df):
     """
     Validate the structure and quality of cybersecurity event data.
@@ -59,30 +56,3 @@ def validate_security_events(df):
     print("Data quality validation passed.")
 
     return True
-if __name__ == "__main__":
-    sample_data = {
-        "event_id": [1, 2, 3],
-        "event_timestamp": pd.to_datetime([
-            "2026-01-01 10:00:00",
-            "2026-01-01 10:05:00",
-            "2026-01-01 10:10:00"
-        ]),
-        "event_type": ["login", "logout", "login"],
-        "user_id": [101, 102, 101],
-        "device_id": [201, 202, 201],
-        "ip_address": [
-            "192.168.1.10",
-            "192.168.1.11",
-            "192.168.1.10"
-        ],
-        "location": ["Delhi", "Mumbai", "Delhi"],
-        "device_type": ["Laptop", "Mobile", "Laptop"],
-        "operating_system": ["Windows", "Android", "Windows"],
-        "auth_status": ["Success", "Success", "Failed"],
-        "user_agent": ["Chrome", "Edge", "Chrome"],
-        "session_id": ["S001", "S002", "S003"]
-    }
-
-    test_df = pd.DataFrame(sample_data)
-
-    validate_security_events(test_df)

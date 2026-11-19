@@ -3,3 +3,10 @@ data/raw/*.csv
 data/processed/*.csv
 .env
 __pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+build_report/
+spine.txt
+Project_Report.docx
